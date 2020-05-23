@@ -1,0 +1,1045 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import spotipy\n",
+    "from spotipy.oauth2 import SpotifyClientCredentials\n",
+    "from spotipy.util import prompt_for_user_token\n",
+    "import os"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "cid = '732fb417e5a04ad6849fe4338de5859f'\n",
+    "user_name = 'jayzzhang'\n",
+    "shared_secret = '3b23e61779474fe384aba5cd7053217'\n",
+    "ruri = 'http://localhost:8001/callback'\n",
+    "scopes = 'user-library-read'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Enter an updated authorization token: \n",
+      "BQDYVfwKszdlJQj3f8ducuMzyrCY0my7Tnq7J3kdAomquLizEgjPIFNc82eRpscLk2hjkdu0pggevbsWMOMYFAOBcSFNvj3VfZXMw529Gj85dQ5wX2QZ-vPUYCVGwb0yGoUsJeEvUrmstH75vpayGDxU6IBOSG1PpN25OXRodb6y6pdolej0BVU9e3M4FZHQ9YJkzQ\n"
+     ]
+    }
+   ],
+   "source": [
+    "print('Enter an updated authorization token: ')\n",
+    "token = input()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sp = spotipy.Spotify(auth = token)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "##gets all saved tracks + time saved\n",
+    "\n",
+    "results1 = sp.current_user_saved_tracks(limit=1,offset=0)\n",
+    "total = results1['total']\n",
+    "\n",
+    "saved_tracks=[]\n",
+    "saved_time = []\n",
+    "offset1 = 0\n",
+    "\n",
+    "while offset1 < total:\n",
+    "    lim = min(50,total-offset1)\n",
+    "    results = sp.current_user_saved_tracks(limit=lim,offset=offset1)\n",
+    "    for i in range(lim):\n",
+    "        saved_tracks.append(results['items'][i]['track']['id'])\n",
+    "        saved_time.append(results['items'][i]['added_at'])\n",
+    "    offset1 = offset1+lim"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "albums = []\n",
+    "artists = []\n",
+    "artist_ids = []\n",
+    "duration = []\n",
+    "explicit = []\n",
+    "popularity = []\n",
+    "track_name = []\n",
+    "track_ids = []\n",
+    "album_type = []\n",
+    "album_ids = []\n",
+    "artists_list = []\n",
+    "track_offset = 0\n",
+    "\n",
+    "while track_offset < total:\n",
+    "    lim = min(50, total-track_offset)\n",
+    "    r1 = sp.tracks(saved_tracks[i:i+lim])\n",
+    "    for j in range(lim):\n",
+    "        albums.append(r1['tracks'][j]['album']['name'])\n",
+    "        album_ids.append(r1['tracks'][j]['album']['id'])\n",
+    "        artists.append(r1['tracks'][j]['album']['artists'][0]['name'])\n",
+    "        duration.append(r1['tracks'][j]['duration_ms'])\n",
+    "        explicit.append(r1['tracks'][j]['explicit'])\n",
+    "        popularity.append(r1['tracks'][j]['popularity'])\n",
+    "        track_ids.append(r1['tracks'][j]['id'])\n",
+    "        track_name.append(r1['tracks'][j]['name'])\n",
+    "        album_type.append(r1['tracks'][j]['album']['album_type'])\n",
+    "        artist_ids.append(r1['tracks'][j]['album']['artists'][0]['id'])\n",
+    "        artists_list.append(r1['tracks'][j]['album']['artists'])\n",
+    "    track_offset = track_offset+ lim"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "artist_list = list(set(artist_ids))\n",
+    "path = 'data/'\n",
+    "os.chdir(path) "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "audio_features = []\n",
+    "feature_offset = 0\n",
+    "\n",
+    "while feature_offset < total:\n",
+    "    lim = min(100,total-feature_offset)\n",
+    "    r3 = sp.audio_features(track_ids[feature_offset:feature_offset+lim])\n",
+    "    for j in range(len(r3)):\n",
+    "        audio_features.append(r3[j])\n",
+    "    feature_offset = lim + feature_offset"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "650"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "artist_names = []\n",
+    "\n",
+    "for j in range(len(artists_list)):\n",
+    "    artist_sublist = []\n",
+    "\n",
+    "    for k in range(len(artists_list[j])):\n",
+    "        artist_sublist.append(artists_list[j][k]['name'])\n",
+    "    artist_names.append(artist_sublist)\n",
+    "\n",
+    "len(artist_names)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#saved artist data\n",
+    "following = (artist_list)\n",
+    "saved_artist_name = []\n",
+    "genres = []\n",
+    "artist_popularity = []\n",
+    "artist_followers = []\n",
+    "artist_offset = 0\n",
+    "\n",
+    "while artist_offset < total:\n",
+    "    lim = min(50,total-artist_offset)\n",
+    "    r4 = sp.artists(artist_ids[artist_offset:artist_offset+lim])\n",
+    "    \n",
+    "    for j in range(lim):\n",
+    "        genres.append(r4['artists'][j]['genres'])\n",
+    "    artist_offset += lim"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "[{'external_urls': {'spotify': 'https://open.spotify.com/artist/2txTOM1PXeT6aMDnEtSbn1'},\n",
+       "  'href': 'https://api.spotify.com/v1/artists/2txTOM1PXeT6aMDnEtSbn1',\n",
+       "  'id': '2txTOM1PXeT6aMDnEtSbn1',\n",
+       "  'name': 'Juto',\n",
+       "  'type': 'artist',\n",
+       "  'uri': 'spotify:artist:2txTOM1PXeT6aMDnEtSbn1'},\n",
+       " {'external_urls': {'spotify': 'https://open.spotify.com/artist/3ApUX1o6oSz321MMECyIYd'},\n",
+       "  'href': 'https://api.spotify.com/v1/artists/3ApUX1o6oSz321MMECyIYd',\n",
+       "  'id': '3ApUX1o6oSz321MMECyIYd',\n",
+       "  'name': 'Quinn XCII',\n",
+       "  'type': 'artist',\n",
+       "  'uri': 'spotify:artist:3ApUX1o6oSz321MMECyIYd'}]"
+      ]
+     },
+     "execution_count": 11,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "artists_list[-4:-3][0]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import pandas as pd\n",
+    "from matplotlib import pyplot as plt\n",
+    "\n",
+    "features = pd.DataFrame(audio_features)\n",
+    "tracks = pd.DataFrame({\n",
+    "    'artist id':artist_ids\n",
+    "    ,'date saved':saved_time\n",
+    "    ,'album name':albums\n",
+    "    ,'artist name':artists\n",
+    "    ,'is explicit':explicit\n",
+    "    ,'track name':track_name\n",
+    "    ,'popularity':popularity\n",
+    "    ,'artists':artist_names\n",
+    "    , 'genres':genres})"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "df = pd.concat([tracks,features],axis=1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>artist id</th>\n",
+       "      <th>date saved</th>\n",
+       "      <th>album name</th>\n",
+       "      <th>artist name</th>\n",
+       "      <th>is explicit</th>\n",
+       "      <th>track name</th>\n",
+       "      <th>popularity</th>\n",
+       "      <th>artists</th>\n",
+       "      <th>genres</th>\n",
+       "      <th>danceability</th>\n",
+       "      <th>...</th>\n",
+       "      <th>liveness</th>\n",
+       "      <th>valence</th>\n",
+       "      <th>tempo</th>\n",
+       "      <th>type</th>\n",
+       "      <th>id</th>\n",
+       "      <th>uri</th>\n",
+       "      <th>track_href</th>\n",
+       "      <th>analysis_url</th>\n",
+       "      <th>duration_ms</th>\n",
+       "      <th>time_signature</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>3Y7RZ31TRPVadSFVy1o8os</td>\n",
+       "      <td>2020-05-20T05:14:57Z</td>\n",
+       "      <td>Hard Place</td>\n",
+       "      <td>H.E.R.</td>\n",
+       "      <td>False</td>\n",
+       "      <td>Hard Place</td>\n",
+       "      <td>68</td>\n",
+       "      <td>[H.E.R.]</td>\n",
+       "      <td>[pop, r&amp;b]</td>\n",
+       "      <td>0.614</td>\n",
+       "      <td>...</td>\n",
+       "      <td>0.1630</td>\n",
+       "      <td>0.340</td>\n",
+       "      <td>160.075</td>\n",
+       "      <td>audio_features</td>\n",
+       "      <td>4IablJ6SqVNGY4vrseyKxu</td>\n",
+       "      <td>spotify:track:4IablJ6SqVNGY4vrseyKxu</td>\n",
+       "      <td>https://api.spotify.com/v1/tracks/4IablJ6SqVNG...</td>\n",
+       "      <td>https://api.spotify.com/v1/audio-analysis/4Iab...</td>\n",
+       "      <td>271733</td>\n",
+       "      <td>4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>21mKp7DqtSNHhCAU2ugvUw</td>\n",
+       "      <td>2020-05-19T18:09:51Z</td>\n",
+       "      <td>Say My Name Remixes</td>\n",
+       "      <td>ODESZA</td>\n",
+       "      <td>False</td>\n",
+       "      <td>Say My Name (feat. Zyra) - RAC Mix</td>\n",
+       "      <td>45</td>\n",
+       "      <td>[ODESZA]</td>\n",
+       "      <td>[chillwave, ninja]</td>\n",
+       "      <td>0.647</td>\n",
+       "      <td>...</td>\n",
+       "      <td>0.0616</td>\n",
+       "      <td>0.477</td>\n",
+       "      <td>115.002</td>\n",
+       "      <td>audio_features</td>\n",
+       "      <td>2IDHoSlbG0CKH9rhq68wTb</td>\n",
+       "      <td>spotify:track:2IDHoSlbG0CKH9rhq68wTb</td>\n",
+       "      <td>https://api.spotify.com/v1/tracks/2IDHoSlbG0CK...</td>\n",
+       "      <td>https://api.spotify.com/v1/audio-analysis/2IDH...</td>\n",
+       "      <td>243091</td>\n",
+       "      <td>4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>1l9d7B8W0IHy3LqWsxP2SH</td>\n",
+       "      <td>2020-05-19T18:03:08Z</td>\n",
+       "      <td>Three</td>\n",
+       "      <td>Phantogram</td>\n",
+       "      <td>False</td>\n",
+       "      <td>Answer</td>\n",
+       "      <td>56</td>\n",
+       "      <td>[Phantogram]</td>\n",
+       "      <td>[alternative dance, chillwave, dream pop, elec...</td>\n",
+       "      <td>0.362</td>\n",
+       "      <td>...</td>\n",
+       "      <td>0.1210</td>\n",
+       "      <td>0.107</td>\n",
+       "      <td>148.376</td>\n",
+       "      <td>audio_features</td>\n",
+       "      <td>09eSdS5RTgyodJt3krr5AC</td>\n",
+       "      <td>spotify:track:09eSdS5RTgyodJt3krr5AC</td>\n",
+       "      <td>https://api.spotify.com/v1/tracks/09eSdS5RTgyo...</td>\n",
+       "      <td>https://api.spotify.com/v1/audio-analysis/09eS...</td>\n",
+       "      <td>231600</td>\n",
+       "      <td>5</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>1l9d7B8W0IHy3LqWsxP2SH</td>\n",
+       "      <td>2020-05-19T17:49:24Z</td>\n",
+       "      <td>Ceremony</td>\n",
+       "      <td>Phantogram</td>\n",
+       "      <td>False</td>\n",
+       "      <td>Pedestal</td>\n",
+       "      <td>55</td>\n",
+       "      <td>[Phantogram]</td>\n",
+       "      <td>[alternative dance, chillwave, dream pop, elec...</td>\n",
+       "      <td>0.510</td>\n",
+       "      <td>...</td>\n",
+       "      <td>0.0903</td>\n",
+       "      <td>0.245</td>\n",
+       "      <td>139.822</td>\n",
+       "      <td>audio_features</td>\n",
+       "      <td>2sE8dFhRTmNKPn398XcrmX</td>\n",
+       "      <td>spotify:track:2sE8dFhRTmNKPn398XcrmX</td>\n",
+       "      <td>https://api.spotify.com/v1/tracks/2sE8dFhRTmNK...</td>\n",
+       "      <td>https://api.spotify.com/v1/audio-analysis/2sE8...</td>\n",
+       "      <td>191053</td>\n",
+       "      <td>4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>2x7EATekOPhFGRx3syMGEC</td>\n",
+       "      <td>2020-05-18T23:48:48Z</td>\n",
+       "      <td>Lucky Me (feat. Great Good Fine Ok)</td>\n",
+       "      <td>The Knocks</td>\n",
+       "      <td>False</td>\n",
+       "      <td>Lucky Me (feat. Great Good Fine Ok)</td>\n",
+       "      <td>56</td>\n",
+       "      <td>[The Knocks, Great Good Fine Ok]</td>\n",
+       "      <td>[alternative dance, edm, indie pop, indie popt...</td>\n",
+       "      <td>0.716</td>\n",
+       "      <td>...</td>\n",
+       "      <td>0.1570</td>\n",
+       "      <td>0.358</td>\n",
+       "      <td>119.915</td>\n",
+       "      <td>audio_features</td>\n",
+       "      <td>5BNBNU5w5f5IIw0Q1Z9Acq</td>\n",
+       "      <td>spotify:track:5BNBNU5w5f5IIw0Q1Z9Acq</td>\n",
+       "      <td>https://api.spotify.com/v1/tracks/5BNBNU5w5f5I...</td>\n",
+       "      <td>https://api.spotify.com/v1/audio-analysis/5BNB...</td>\n",
+       "      <td>202125</td>\n",
+       "      <td>4</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "<p>5 rows × 27 columns</p>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "                artist id            date saved  \\\n",
+       "0  3Y7RZ31TRPVadSFVy1o8os  2020-05-20T05:14:57Z   \n",
+       "1  21mKp7DqtSNHhCAU2ugvUw  2020-05-19T18:09:51Z   \n",
+       "2  1l9d7B8W0IHy3LqWsxP2SH  2020-05-19T18:03:08Z   \n",
+       "3  1l9d7B8W0IHy3LqWsxP2SH  2020-05-19T17:49:24Z   \n",
+       "4  2x7EATekOPhFGRx3syMGEC  2020-05-18T23:48:48Z   \n",
+       "\n",
+       "                            album name artist name  is explicit  \\\n",
+       "0                           Hard Place      H.E.R.        False   \n",
+       "1                  Say My Name Remixes      ODESZA        False   \n",
+       "2                                Three  Phantogram        False   \n",
+       "3                             Ceremony  Phantogram        False   \n",
+       "4  Lucky Me (feat. Great Good Fine Ok)  The Knocks        False   \n",
+       "\n",
+       "                            track name  popularity  \\\n",
+       "0                           Hard Place          68   \n",
+       "1   Say My Name (feat. Zyra) - RAC Mix          45   \n",
+       "2                               Answer          56   \n",
+       "3                             Pedestal          55   \n",
+       "4  Lucky Me (feat. Great Good Fine Ok)          56   \n",
+       "\n",
+       "                            artists  \\\n",
+       "0                          [H.E.R.]   \n",
+       "1                          [ODESZA]   \n",
+       "2                      [Phantogram]   \n",
+       "3                      [Phantogram]   \n",
+       "4  [The Knocks, Great Good Fine Ok]   \n",
+       "\n",
+       "                                              genres  danceability  ...  \\\n",
+       "0                                         [pop, r&b]         0.614  ...   \n",
+       "1                                 [chillwave, ninja]         0.647  ...   \n",
+       "2  [alternative dance, chillwave, dream pop, elec...         0.362  ...   \n",
+       "3  [alternative dance, chillwave, dream pop, elec...         0.510  ...   \n",
+       "4  [alternative dance, edm, indie pop, indie popt...         0.716  ...   \n",
+       "\n",
+       "   liveness  valence    tempo            type                      id  \\\n",
+       "0    0.1630    0.340  160.075  audio_features  4IablJ6SqVNGY4vrseyKxu   \n",
+       "1    0.0616    0.477  115.002  audio_features  2IDHoSlbG0CKH9rhq68wTb   \n",
+       "2    0.1210    0.107  148.376  audio_features  09eSdS5RTgyodJt3krr5AC   \n",
+       "3    0.0903    0.245  139.822  audio_features  2sE8dFhRTmNKPn398XcrmX   \n",
+       "4    0.1570    0.358  119.915  audio_features  5BNBNU5w5f5IIw0Q1Z9Acq   \n",
+       "\n",
+       "                                    uri  \\\n",
+       "0  spotify:track:4IablJ6SqVNGY4vrseyKxu   \n",
+       "1  spotify:track:2IDHoSlbG0CKH9rhq68wTb   \n",
+       "2  spotify:track:09eSdS5RTgyodJt3krr5AC   \n",
+       "3  spotify:track:2sE8dFhRTmNKPn398XcrmX   \n",
+       "4  spotify:track:5BNBNU5w5f5IIw0Q1Z9Acq   \n",
+       "\n",
+       "                                          track_href  \\\n",
+       "0  https://api.spotify.com/v1/tracks/4IablJ6SqVNG...   \n",
+       "1  https://api.spotify.com/v1/tracks/2IDHoSlbG0CK...   \n",
+       "2  https://api.spotify.com/v1/tracks/09eSdS5RTgyo...   \n",
+       "3  https://api.spotify.com/v1/tracks/2sE8dFhRTmNK...   \n",
+       "4  https://api.spotify.com/v1/tracks/5BNBNU5w5f5I...   \n",
+       "\n",
+       "                                        analysis_url  duration_ms  \\\n",
+       "0  https://api.spotify.com/v1/audio-analysis/4Iab...       271733   \n",
+       "1  https://api.spotify.com/v1/audio-analysis/2IDH...       243091   \n",
+       "2  https://api.spotify.com/v1/audio-analysis/09eS...       231600   \n",
+       "3  https://api.spotify.com/v1/audio-analysis/2sE8...       191053   \n",
+       "4  https://api.spotify.com/v1/audio-analysis/5BNB...       202125   \n",
+       "\n",
+       "   time_signature  \n",
+       "0               4  \n",
+       "1               4  \n",
+       "2               5  \n",
+       "3               4  \n",
+       "4               4  \n",
+       "\n",
+       "[5 rows x 27 columns]"
+      ]
+     },
+     "execution_count": 14,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {},
+   "outputs": [
+    {
+     "ename": "AttributeError",
+     "evalue": "'DataFrame' object has no attribute 'artists'",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[1;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[1;31mAttributeError\u001b[0m                            Traceback (most recent call last)",
+      "\u001b[1;32m<ipython-input-24-c63d371b05ff>\u001b[0m in \u001b[0;36m<module>\u001b[1;34m\u001b[0m\n\u001b[1;32m----> 1\u001b[1;33m \u001b[0martist_df\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mpd\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mDataFrame\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mdf\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0martists\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mvalues\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtolist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0madd_prefix\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'artist_'\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m      2\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m      3\u001b[0m \u001b[0martist_df\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mhead\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m~\\Anaconda3\\lib\\site-packages\\pandas\\core\\generic.py\u001b[0m in \u001b[0;36m__getattr__\u001b[1;34m(self, name)\u001b[0m\n\u001b[0;32m   5272\u001b[0m             \u001b[1;32mif\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m_info_axis\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m_can_hold_identifiers_and_holds_name\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   5273\u001b[0m                 \u001b[1;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m[\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m-> 5274\u001b[1;33m             \u001b[1;32mreturn\u001b[0m \u001b[0mobject\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__getattribute__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mname\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m   5275\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   5276\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0m__setattr__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mname\u001b[0m\u001b[1;33m:\u001b[0m \u001b[0mstr\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mvalue\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;33m->\u001b[0m \u001b[1;32mNone\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;31mAttributeError\u001b[0m: 'DataFrame' object has no attribute 'artists'"
+     ]
+    }
+   ],
+   "source": [
+    "artist_df = pd.DataFrame(df.artists.values.tolist()).add_prefix('artist_')\n",
+    "\n",
+    "artist_df.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(650, 13)"
+      ]
+     },
+     "execution_count": 16,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "genre_df=pd.DataFrame(df.genres.values.tolist()).add_prefix('genre_')\n",
+    "genre_df.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>artist id</th>\n",
+       "      <th>date saved</th>\n",
+       "      <th>album name</th>\n",
+       "      <th>is explicit</th>\n",
+       "      <th>track name</th>\n",
+       "      <th>popularity</th>\n",
+       "      <th>danceability</th>\n",
+       "      <th>energy</th>\n",
+       "      <th>key</th>\n",
+       "      <th>loudness</th>\n",
+       "      <th>...</th>\n",
+       "      <th>genre_3</th>\n",
+       "      <th>genre_4</th>\n",
+       "      <th>genre_5</th>\n",
+       "      <th>genre_6</th>\n",
+       "      <th>genre_7</th>\n",
+       "      <th>genre_8</th>\n",
+       "      <th>genre_9</th>\n",
+       "      <th>genre_10</th>\n",
+       "      <th>genre_11</th>\n",
+       "      <th>genre_12</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>3Y7RZ31TRPVadSFVy1o8os</td>\n",
+       "      <td>2020-05-20T05:14:57Z</td>\n",
+       "      <td>Hard Place</td>\n",
+       "      <td>False</td>\n",
+       "      <td>Hard Place</td>\n",
+       "      <td>68</td>\n",
+       "      <td>0.614</td>\n",
+       "      <td>0.719</td>\n",
+       "      <td>9</td>\n",
+       "      <td>-4.694</td>\n",
+       "      <td>...</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>21mKp7DqtSNHhCAU2ugvUw</td>\n",
+       "      <td>2020-05-19T18:09:51Z</td>\n",
+       "      <td>Say My Name Remixes</td>\n",
+       "      <td>False</td>\n",
+       "      <td>Say My Name (feat. Zyra) - RAC Mix</td>\n",
+       "      <td>45</td>\n",
+       "      <td>0.647</td>\n",
+       "      <td>0.624</td>\n",
+       "      <td>9</td>\n",
+       "      <td>-8.446</td>\n",
+       "      <td>...</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>1l9d7B8W0IHy3LqWsxP2SH</td>\n",
+       "      <td>2020-05-19T18:03:08Z</td>\n",
+       "      <td>Three</td>\n",
+       "      <td>False</td>\n",
+       "      <td>Answer</td>\n",
+       "      <td>56</td>\n",
+       "      <td>0.362</td>\n",
+       "      <td>0.371</td>\n",
+       "      <td>11</td>\n",
+       "      <td>-8.383</td>\n",
+       "      <td>...</td>\n",
+       "      <td>electropop</td>\n",
+       "      <td>indie pop</td>\n",
+       "      <td>indie rock</td>\n",
+       "      <td>indietronica</td>\n",
+       "      <td>metropopolis</td>\n",
+       "      <td>modern rock</td>\n",
+       "      <td>shimmer pop</td>\n",
+       "      <td>vapor soul</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>1l9d7B8W0IHy3LqWsxP2SH</td>\n",
+       "      <td>2020-05-19T17:49:24Z</td>\n",
+       "      <td>Ceremony</td>\n",
+       "      <td>False</td>\n",
+       "      <td>Pedestal</td>\n",
+       "      <td>55</td>\n",
+       "      <td>0.510</td>\n",
+       "      <td>0.861</td>\n",
+       "      <td>11</td>\n",
+       "      <td>-5.151</td>\n",
+       "      <td>...</td>\n",
+       "      <td>electropop</td>\n",
+       "      <td>indie pop</td>\n",
+       "      <td>indie rock</td>\n",
+       "      <td>indietronica</td>\n",
+       "      <td>metropopolis</td>\n",
+       "      <td>modern rock</td>\n",
+       "      <td>shimmer pop</td>\n",
+       "      <td>vapor soul</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>2x7EATekOPhFGRx3syMGEC</td>\n",
+       "      <td>2020-05-18T23:48:48Z</td>\n",
+       "      <td>Lucky Me (feat. Great Good Fine Ok)</td>\n",
+       "      <td>False</td>\n",
+       "      <td>Lucky Me (feat. Great Good Fine Ok)</td>\n",
+       "      <td>56</td>\n",
+       "      <td>0.716</td>\n",
+       "      <td>0.861</td>\n",
+       "      <td>10</td>\n",
+       "      <td>-4.407</td>\n",
+       "      <td>...</td>\n",
+       "      <td>indie poptimism</td>\n",
+       "      <td>indietronica</td>\n",
+       "      <td>new french touch</td>\n",
+       "      <td>nu disco</td>\n",
+       "      <td>pop</td>\n",
+       "      <td>tropical house</td>\n",
+       "      <td>vapor soul</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "<p>5 rows × 40 columns</p>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "                artist id            date saved  \\\n",
+       "0  3Y7RZ31TRPVadSFVy1o8os  2020-05-20T05:14:57Z   \n",
+       "1  21mKp7DqtSNHhCAU2ugvUw  2020-05-19T18:09:51Z   \n",
+       "2  1l9d7B8W0IHy3LqWsxP2SH  2020-05-19T18:03:08Z   \n",
+       "3  1l9d7B8W0IHy3LqWsxP2SH  2020-05-19T17:49:24Z   \n",
+       "4  2x7EATekOPhFGRx3syMGEC  2020-05-18T23:48:48Z   \n",
+       "\n",
+       "                            album name  is explicit  \\\n",
+       "0                           Hard Place        False   \n",
+       "1                  Say My Name Remixes        False   \n",
+       "2                                Three        False   \n",
+       "3                             Ceremony        False   \n",
+       "4  Lucky Me (feat. Great Good Fine Ok)        False   \n",
+       "\n",
+       "                            track name  popularity  danceability  energy  key  \\\n",
+       "0                           Hard Place          68         0.614   0.719    9   \n",
+       "1   Say My Name (feat. Zyra) - RAC Mix          45         0.647   0.624    9   \n",
+       "2                               Answer          56         0.362   0.371   11   \n",
+       "3                             Pedestal          55         0.510   0.861   11   \n",
+       "4  Lucky Me (feat. Great Good Fine Ok)          56         0.716   0.861   10   \n",
+       "\n",
+       "   loudness  ...          genre_3       genre_4           genre_5  \\\n",
+       "0    -4.694  ...             None          None              None   \n",
+       "1    -8.446  ...             None          None              None   \n",
+       "2    -8.383  ...       electropop     indie pop        indie rock   \n",
+       "3    -5.151  ...       electropop     indie pop        indie rock   \n",
+       "4    -4.407  ...  indie poptimism  indietronica  new french touch   \n",
+       "\n",
+       "        genre_6       genre_7         genre_8      genre_9    genre_10  \\\n",
+       "0          None          None            None         None        None   \n",
+       "1          None          None            None         None        None   \n",
+       "2  indietronica  metropopolis     modern rock  shimmer pop  vapor soul   \n",
+       "3  indietronica  metropopolis     modern rock  shimmer pop  vapor soul   \n",
+       "4      nu disco           pop  tropical house   vapor soul        None   \n",
+       "\n",
+       "  genre_11 genre_12  \n",
+       "0     None     None  \n",
+       "1     None     None  \n",
+       "2     None     None  \n",
+       "3     None     None  \n",
+       "4     None     None  \n",
+       "\n",
+       "[5 rows x 40 columns]"
+      ]
+     },
+     "execution_count": 17,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df=df.drop(['artist name','artists','genres'],axis=1)\n",
+    "df=pd.concat([df,artist_df,genre_df],axis=1)\n",
+    "df.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<matplotlib.axes._subplots.AxesSubplot at 0x1a465caa148>"
+      ]
+     },
+     "execution_count": 18,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 1080x360 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "df_drop=df.drop(['analysis_url','uri','track_href','type','id','artist id'],axis=1)\n",
+    "fig = plt.figure(figsize=(15,5)) \n",
+    "df_drop.boxplot(column = ['danceability','energy','speechiness','acousticness','instrumentalness','liveness','valence'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>percent</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>genre_12</th>\n",
+       "      <td>0.98</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>artist_2</th>\n",
+       "      <td>0.98</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>genre_11</th>\n",
+       "      <td>0.98</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>genre_10</th>\n",
+       "      <td>0.92</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>genre_9</th>\n",
+       "      <td>0.88</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>genre_8</th>\n",
+       "      <td>0.86</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>genre_7</th>\n",
+       "      <td>0.82</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>genre_6</th>\n",
+       "      <td>0.82</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>artist_1</th>\n",
+       "      <td>0.72</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>genre_5</th>\n",
+       "      <td>0.66</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>genre_4</th>\n",
+       "      <td>0.44</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>genre_3</th>\n",
+       "      <td>0.36</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>genre_2</th>\n",
+       "      <td>0.28</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>genre_1</th>\n",
+       "      <td>0.08</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "          percent\n",
+       "genre_12     0.98\n",
+       "artist_2     0.98\n",
+       "genre_11     0.98\n",
+       "genre_10     0.92\n",
+       "genre_9      0.88\n",
+       "genre_8      0.86\n",
+       "genre_7      0.82\n",
+       "genre_6      0.82\n",
+       "artist_1     0.72\n",
+       "genre_5      0.66\n",
+       "genre_4      0.44\n",
+       "genre_3      0.36\n",
+       "genre_2      0.28\n",
+       "genre_1      0.08"
+      ]
+     },
+     "execution_count": 23,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "nas=pd.DataFrame(df_drop.isnull().sum().sort_values(ascending=False)/len(df_drop),columns = ['percent'])\n",
+    "pos = nas['percent'] > 0\n",
+    "nas[pos]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 104,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "_=df_drop['popularity'].plot(kind='hist',bins = 25)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 105,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "_=df_drop['key'].plot(kind='hist',bins = 10)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 106,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "df_drop['duration_min'] = df_drop['duration_ms']/60000.0\n",
+    "_=df_drop['duration_min'].plot(kind='hist',bins = 30)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "df_drop.to_csv('working_data.csv',index=False)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.7"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
